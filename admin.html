@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>School Admin | N.G. Public School</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f4f7f4;color:#18332c;font-family:Arial,sans-serif}.wrap{max-width:1050px;margin:35px auto;padding:0 16px}.box{background:#fff;border:1px solid #dce6df;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 28px #173e3010}h1{margin-top:0}.muted{color:#64756d}.row{display:flex;gap:10px;flex-wrap:wrap}input{padding:12px;border:1px solid #cbd8d0;border-radius:9px;min-width:220px}button{padding:11px 16px;border:0;border-radius:9px;background:#145b4d;color:#fff;font-weight:bold;cursor:pointer}button:disabled{opacity:.6}#dashboard{display:none}#message{margin-top:12px;color:#145b4d}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:750px}th,td{text-align:left;padding:12px;border-bottom:1px solid #e4ebe6;font-size:14px}th{background:#edf3ec}.pill{padding:4px 8px;background:#eaf3e8;border-radius:20px;font-size:12px}
+*{box-sizing:border-box}body{margin:0;background:#f4f7f4;color:#18332c;font-family:Arial,sans-serif}.wrap{max-width:1050px;margin:35px auto;padding:0 16px}.box{background:#fff;border:1px solid #dce6df;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 28px #173e3010}h1{margin-top:0}.muted{color:#64756d}.row{display:flex;gap:10px;flex-wrap:wrap}input,select,textarea{padding:12px;border:1px solid #cbd8d0;border-radius:9px;min-width:220px;max-width:100%;font:inherit}textarea{width:100%;min-height:75px}label{font-size:13px;font-weight:bold;display:block;margin:8px 0 5px}.teacher-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.teacher-item{border:1px solid #dce6df;border-radius:12px;padding:14px}.teacher-item img{width:100%;height:150px;object-fit:cover;border-radius:8px;background:#edf3ec}.teacher-item button{margin:6px 5px 0 0}.danger{background:#a83232}.secondary{background:#63756d}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}button{padding:11px 16px;border:0;border-radius:9px;background:#145b4d;color:#fff;font-weight:bold;cursor:pointer}button:disabled{opacity:.6}#dashboard{display:none}#message{margin-top:12px;color:#145b4d}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:750px}th,td{text-align:left;padding:12px;border-bottom:1px solid #e4ebe6;font-size:14px}th{background:#edf3ec}.pill{padding:4px 8px;background:#eaf3e8;border-radius:20px;font-size:12px}
 </style>
 </head>
 <body><main class="wrap">
@@ -12,13 +12,31 @@
 <div id="login">
 <div class="row"><input id="email" type="email" placeholder="Admin email" autocomplete="username"><input id="password" type="password" placeholder="Password" autocomplete="current-password"><button id="loginBtn">Sign in</button></div>
 </div>
-<div id="dashboard"><div class="row"><p id="who" class="muted"></p><button id="refreshBtn">Refresh enquiries</button><button id="logoutBtn">Sign out</button></div><div class="tablewrap"><table><thead><tr><th>Received</th><th>Student</th><th>Parent / guardian</th><th>Class</th><th>Mobile</th><th>Question</th><th>Status</th></tr></thead><tbody id="rows"><tr><td colspan="7">Loading...</td></tr></tbody></table></div></div>
+<div id="dashboard"><div class="row"><p id="who" class="muted"></p><button id="refreshBtn">Refresh enquiries</button><button id="logoutBtn">Sign out</button></div><section class="box" id="teacherManagement">
+<h2>Teacher Management</h2>
+<p class="muted">Add, edit or remove teacher profiles. Public website par active profiles automatically dikhengi.</p>
+<form id="teacherForm">
+<input type="hidden" id="teacherId">
+<div class="formgrid">
+  <div><label for="teacherName">Teacher name *</label><input id="teacherName" maxlength="80" required placeholder="Full name"></div>
+  <div><label for="teacherSubject">Subject / Role *</label><input id="teacherSubject" maxlength="80" required placeholder="e.g. Mathematics"></div>
+  <div><label for="teacherQualification">Qualification</label><input id="teacherQualification" maxlength="120" placeholder="e.g. M.Sc., B.Ed."></div>
+  <div><label for="teacherPhone">Contact number (optional)</label><input id="teacherPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div>
+  <div><label for="teacherPhoto">Photo URL (optional)</label><input id="teacherPhoto" type="url" placeholder="https://..."></div>
+  <div><label for="teacherActive">Visibility</label><select id="teacherActive"><option value="true">Visible on website</option><option value="false">Hidden</option></select></div>
+</div>
+<p><button id="saveTeacherBtn" type="submit">Add teacher</button> <button id="cancelTeacherBtn" class="secondary" type="button">Clear form</button></p>
+</form>
+<div id="teacherMessage" role="status" class="muted"></div>
+<div id="teacherList" class="teacher-grid"><p class="muted">Loading teachers…</p></div>
+</section>
+<div class="tablewrap"><table><thead><tr><th>Received</th><th>Student</th><th>Parent / guardian</th><th>Class</th><th>Mobile</th><th>Question</th><th>Status</th></tr></thead><tbody id="rows"><tr><td colspan="7">Loading...</td></tr></tbody></table></div></div>
 <div id="message" role="status"></div></div>
 </main>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, orderBy, limit, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB6nHxGHmelA8HMYrcsJai6nWxkMuPGPZg",
@@ -58,7 +76,115 @@ onAuthStateChanged(auth, async user => {
   $("login").style.display = "none";
   $("dashboard").style.display = "block";
   $("who").textContent = "Signed in as " + user.email;
-  await loadEnquiries();
+  await Promise.all([loadEnquiries(), loadTeachersAdmin()]);
+});
+
+function clearTeacherForm() {
+  $("teacherForm").reset();
+  $("teacherId").value = "";
+  $("saveTeacherBtn").textContent = "Add teacher";
+}
+$("cancelTeacherBtn").onclick = clearTeacherForm;
+
+async function loadTeachersAdmin() {
+  const list = $("teacherList");
+  list.textContent = "Loading teachers…";
+  try {
+    const snap = await getDocs(query(collection(db, "TEACHERS"), orderBy("createdAt", "desc")));
+    list.replaceChildren();
+    if (snap.empty) {
+      list.textContent = "No teacher profiles added yet.";
+      return;
+    }
+    snap.forEach(item => {
+      const t = item.data();
+      const card = document.createElement("article");
+      card.className = "teacher-item";
+      if (t.photoUrl) {
+        const img = document.createElement("img");
+        img.src = t.photoUrl;
+        img.alt = "Teacher photo";
+        img.onerror = () => { img.style.display = "none"; };
+        card.appendChild(img);
+      }
+      const title = document.createElement("h3");
+      title.textContent = t.name || "Teacher";
+      const details = document.createElement("p");
+      details.textContent = [t.subject, t.qualification, t.phone, t.active === false ? "Hidden" : "Visible"].filter(Boolean).join(" · ");
+      const edit = document.createElement("button");
+      edit.textContent = "Edit";
+      edit.onclick = () => {
+        $("teacherId").value = item.id;
+        $("teacherName").value = t.name || "";
+        $("teacherSubject").value = t.subject || "";
+        $("teacherQualification").value = t.qualification || "";
+        $("teacherPhone").value = t.phone || "";
+        $("teacherPhoto").value = t.photoUrl || "";
+        $("teacherActive").value = String(t.active !== false);
+        $("saveTeacherBtn").textContent = "Save changes";
+        $("teacherForm").scrollIntoView({behavior:"smooth", block:"center"});
+      };
+      const remove = document.createElement("button");
+      remove.textContent = "Delete";
+      remove.className = "danger";
+      remove.onclick = async () => {
+        if (!confirm("Delete this teacher profile?")) return;
+        try {
+          await deleteDoc(doc(db, "TEACHERS", item.id));
+          $("teacherMessage").textContent = "Teacher deleted.";
+          await loadTeachersAdmin();
+        } catch (e) {
+          $("teacherMessage").textContent = "Could not delete. Check Firestore Rules.";
+        }
+      };
+      card.append(title, details, edit, remove);
+      list.appendChild(card);
+    });
+  } catch (error) {
+    console.error(error);
+    list.textContent = "Could not load teachers. Firestore Rules may need publishing.";
+  }
+}
+
+$("teacherForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const name = $("teacherName").value.trim();
+  const subject = $("teacherSubject").value.trim();
+  const phone = $("teacherPhone").value.trim();
+  const photoUrl = $("teacherPhoto").value.trim();
+  if (phone && !/^[6-9]\\d{9}$/.test(phone)) {
+    $("teacherMessage").textContent = "Enter a valid 10-digit Indian mobile number, or leave it blank.";
+    return;
+  }
+  if (photoUrl && !/^https:\\/\\//i.test(photoUrl)) {
+    $("teacherMessage").textContent = "Photo URL must start with https://";
+    return;
+  }
+  const data = {
+    name, subject,
+    qualification: $("teacherQualification").value.trim(),
+    phone, photoUrl,
+    active: $("teacherActive").value === "true",
+    updatedAt: serverTimestamp()
+  };
+  const id = $("teacherId").value;
+  $("saveTeacherBtn").disabled = true;
+  try {
+    if (id) {
+      await updateDoc(doc(db, "TEACHERS", id), data);
+      $("teacherMessage").textContent = "Teacher details updated.";
+    } else {
+      await addDoc(collection(db, "TEACHERS"), {...data, createdAt: serverTimestamp()});
+      $("teacherMessage").textContent = "Teacher added.";
+    }
+    clearTeacherForm();
+    await loadTeachersAdmin();
+  } catch (error) {
+    console.error(error);
+    $("teacherMessage").textContent = "Save failed. Publish the updated Firestore Rules first.";
+  } finally {
+    $("saveTeacherBtn").disabled = false;
+  }
 });
 
 async function loadEnquiries() {
