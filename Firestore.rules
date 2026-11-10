@@ -8,19 +8,53 @@ service cloud.firestore {
         && request.auth.uid == "qOr1HZ9TyMN5piJjTD9nYoNqxth2";
     }
 
+    // Public can read notices; only the authenticated school admin can manage them.
+    match /NOTICES/{noticeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Public admission enquiries must match the exact fields sent by index.html.
     match /ADMISSIONS/{id} {
       allow create: if
         request.resource.data.keys().hasAll([
           'studentName',
           'parentName',
-          'class',
+          'classInterested',
           'mobile',
-          'message'
-        ]);
+          'question',
+          'createdAt',
+          'status'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'studentName',
+          'parentName',
+          'classInterested',
+          'mobile',
+          'question',
+          'createdAt',
+          'status'
+        ])
+        && request.resource.data.studentName is string
+        && request.resource.data.studentName.size() > 0
+        && request.resource.data.studentName.size() <= 80
+        && request.resource.data.parentName is string
+        && request.resource.data.parentName.size() > 0
+        && request.resource.data.parentName.size() <= 80
+        && request.resource.data.classInterested is string
+        && request.resource.data.classInterested.size() > 0
+        && request.resource.data.classInterested.size() <= 30
+        && request.resource.data.mobile is string
+        && request.resource.data.mobile.matches('^[6-9][0-9]{9}$')
+        && request.resource.data.question is string
+        && request.resource.data.question.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.status == 'new';
 
       allow read, update, delete: if isAdmin();
     }
 
+    // Deny access to every collection not explicitly listed above.
     match /{document=**} {
       allow read, write: if false;
     }
