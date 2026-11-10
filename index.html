@@ -24,7 +24,7 @@ section{padding:76px 0}.section-head{max-width:650px;margin-bottom:30px}.kicker{
 <body>
 <header><div class="container"><nav>
 <a class="brand" href="#home"><span class="crest">NG</span><span>N.G. Public School<small>Morena · Madhya Pradesh</small></span></a>
-<div class="navlinks"><a href="#about">About</a><a href="#facilities">Facilities</a><a href="#teachers">Teachers</a><a href="#admission">Admissions</a><a href="#contact">Contact</a></div>
+<div class="navlinks"><a href="#about">About</a><a href="#facilities">Facilities</a><a href="#teachers">Teachers</a><a href="#notices">Notices</a><a href="#admission">Admissions</a><a href="#contact">Contact</a></div>
 <div class="actions"><button class="theme" id="theme" aria-label="Toggle dark mode">☾</button><a class="btn" href="#admission">Enquire now ↗</a></div>
 </nav></div></header>
 <main id="home">
@@ -46,6 +46,7 @@ section{padding:76px 0}.section-head{max-width:650px;margin-bottom:30px}.kicker{
 <div class="card"><div class="icon">🌱</div><h3>Campus essentials</h3><p>A supportive, accessible and clean learning environment.</p></div>
 </div></div></section>
 <section id="teachers"><div class="container"><div class="section-head"><span class="kicker">Our educators</span><h2>Meet our teachers.</h2><p>Our teaching team helps students learn, grow and build confidence.</p></div><div class="cards" id="teacherCards"><div class="teacher-empty">Loading teacher information…</div></div></div></section>
+<section id="notices" class="features"><div class="container"><div class="section-head"><span class="kicker">Latest updates</span><h2>School notices & announcements.</h2><p>Important updates published by the school office.</p></div><div class="cards" id="noticeCards"><div class="teacher-empty">Loading notices…</div></div></div></section>
 <section id="admission"><div class="container admission-grid"><div><div class="section-head"><span class="kicker">Admissions</span><h2>Take the first step towards learning.</h2><p>Send an enquiry to the school. The form below stores submissions in the connected Firebase database.</p></div>
 <ol class="steps"><li>Submit an enquiry using the form.</li><li>The school administrator can review it in the private admin dashboard.</li><li>Confirm admission dates, documents and fees directly with the school.</li></ol></div>
 <div class="formbox"><h3>Admission enquiry</h3><p class="muted">Use this only after the school has approved the website and its student-data process.</p>
@@ -117,6 +118,36 @@ async function loadTeachers() {
   }
 }
 loadTeachers();
+
+async function loadNotices() {
+  const container = $("noticeCards");
+  try {
+    const snap = await getDocs(query(collection(db, "NOTICES"), orderBy("createdAt", "desc")));
+    container.replaceChildren();
+    const notices = snap.docs.map(d => ({id:d.id, ...d.data()})).filter(n => n.active !== false);
+    if (!notices.length) {
+      container.innerHTML = '<div class="teacher-empty">There are no new notices right now.</div>';
+      return;
+    }
+    notices.forEach(n => {
+      const card = document.createElement("article");
+      card.className = "card";
+      const title = document.createElement("h3");
+      title.textContent = n.title || "School notice";
+      const body = document.createElement("p");
+      body.textContent = n.body || "";
+      const date = document.createElement("small");
+      date.className = "muted";
+      date.textContent = n.noticeDate || (n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString() : "");
+      card.append(title, body, date);
+      container.appendChild(card);
+    });
+  } catch (error) {
+    console.error("Notice loading error:", error);
+    container.innerHTML = '<div class="teacher-empty">Notices are temporarily unavailable.</div>';
+  }
+}
+loadNotices();
 
 $("theme").addEventListener("click", () => {
   const dark = document.documentElement.dataset.theme !== "dark";
