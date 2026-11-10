@@ -152,11 +152,11 @@ $("teacherForm").addEventListener("submit", async event => {
   const subject = $("teacherSubject").value.trim();
   const phone = $("teacherPhone").value.trim();
   const photoUrl = $("teacherPhoto").value.trim();
-  if (phone && !/^[6-9]\\d{9}$/.test(phone)) {
+  if (phone && !/^[6-9][0-9]{9}$/.test(phone)) {
     $("teacherMessage").textContent = "Enter a valid 10-digit Indian mobile number, or leave it blank.";
     return;
   }
-  if (photoUrl && !/^https:\\/\\//i.test(photoUrl)) {
+  if (photoUrl && !photoUrl.toLowerCase().startsWith("https://")) {
     $("teacherMessage").textContent = "Photo URL must start with https://";
     return;
   }
