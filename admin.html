@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>School Admin | N.G. Public School</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7f4;color:#18332c;font-family:Arial,sans-serif}.wrap{max-width:1050px;margin:35px auto;padding:0 16px}.box{background:#fff;border:1px solid #dce6df;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 28px #173e3010}h1{margin-top:0}.muted{color:#64756d}.row{display:flex;gap:10px;flex-wrap:wrap}input{padding:12px;border:1px solid #cbd8d0;border-radius:9px;min-width:220px}button{padding:11px 16px;border:0;border-radius:9px;background:#145b4d;color:#fff;font-weight:bold;cursor:pointer}button:disabled{opacity:.6}#dashboard{display:none}#message{margin-top:12px;color:#145b4d}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:750px}th,td{text-align:left;padding:12px;border-bottom:1px solid #e4ebe6;font-size:14px}th{background:#edf3ec}.pill{padding:4px 8px;background:#eaf3e8;border-radius:20px;font-size:12px}
+</style>
+</head>
+<body><main class="wrap">
+<div class="box"><h1>N.G. Public School — Admin</h1><p class="muted">Private admission enquiry dashboard. Sign in with the administrator account enabled in Firebase Authentication.</p>
+<div id="login">
+<div class="row"><input id="email" type="email" placeholder="Admin email" autocomplete="username"><input id="password" type="password" placeholder="Password" autocomplete="current-password"><button id="loginBtn">Sign in</button></div>
+</div>
+<div id="dashboard"><div class="row"><p id="who" class="muted"></p><button id="refreshBtn">Refresh enquiries</button><button id="logoutBtn">Sign out</button></div><div class="tablewrap"><table><thead><tr><th>Received</th><th>Student</th><th>Parent / guardian</th><th>Class</th><th>Mobile</th><th>Question</th><th>Status</th></tr></thead><tbody id="rows"><tr><td colspan="7">Loading...</td></tr></tbody></table></div></div>
+<div id="message" role="status"></div></div>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB6nHxGHmelA8HMYrcsJai6nWxkMuPGPZg",
+  authDomain: "ng-public-school-5b904.firebaseapp.com",
+  projectId: "ng-public-school-5b904",
+  storageBucket: "ng-public-school-5b904.firebasestorage.app",
+  messagingSenderId: "893766164979",
+  appId: "1:893766164979:web:98f63da9b0bf0240f63286",
+  measurementId: "G-Q5Q8M894TQ"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const adminUid = "qOr1HZ9TyMN5piJjTD9nYoNqxth2";
+
+$("loginBtn").onclick = async () => {
+  $("message").textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+  } catch (error) {
+    $("message").textContent = "Sign-in failed. Check the email/password and confirm Email/Password is enabled in Firebase.";
+  }
+};
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    $("login").style.display = "block";
+    $("dashboard").style.display = "none";
+    return;
+  }
+  if (user.uid !== adminUid) {
+    $("message").textContent = "This account is not authorized as the school administrator.";
+    await signOut(auth);
+    return;
+  }
+  $("login").style.display = "none";
+  $("dashboard").style.display = "block";
+  $("who").textContent = "Signed in as " + user.email;
+  await loadEnquiries();
+});
+
+async function loadEnquiries() {
+  $("rows").innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+  try {
+    const q = query(collection(db, "ADMISSIONS"), orderBy("createdAt", "desc"), limit(100));
+    const snapshot = await getDocs(q);
+    $("rows").replaceChildren();
+    if (snapshot.empty) {
+      $("rows").innerHTML = '<tr><td colspan="7">No admission enquiries yet.</td></tr>';
+      return;
+    }
+    snapshot.forEach(docSnap => {
+      const d = docSnap.data();
+      const tr = document.createElement("tr");
+      const date = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString() : "Just received";
+      [date, d.studentName, d.parentName, d.classInterested, d.mobile, d.question || "—", d.status || "new"].forEach(value => {
+        const td = document.createElement("td");
+        td.textContent = value ?? "—";
+        tr.appendChild(td);
+      });
+      $("rows").appendChild(tr);
+    });
+  } catch (error) {
+    console.error(error);
+    $("rows").innerHTML = '<tr><td colspan="7">Could not load data. Check Firestore rules and administrator UID.</td></tr>';
+  }
+}
+$("refreshBtn").onclick = loadEnquiries;
+$("logoutBtn").onclick = () => signOut(auth);
+</script></body></html>
