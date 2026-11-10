@@ -54,6 +54,12 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Teacher profiles are public to read; only the school admin can manage them.
+    match /TEACHERS/{teacherId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     // Deny access to every collection not explicitly listed above.
     match /{document=**} {
       allow read, write: if false;
