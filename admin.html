@@ -12,7 +12,17 @@
 <div id="login">
 <div class="row"><input id="email" type="email" placeholder="Admin email" autocomplete="username"><input id="password" type="password" placeholder="Password" autocomplete="current-password"><button id="loginBtn">Sign in</button></div>
 </div>
-<div id="dashboard"><div class="row"><p id="who" class="muted"></p><button id="refreshBtn">Refresh enquiries</button><button id="logoutBtn">Sign out</button></div><section class="box" id="teacherManagement">
+<div id="dashboard"><div class="row"><p id="who" class="muted"></p><button id="refreshBtn">Refresh enquiries</button><button id="logoutBtn">Sign out</button></div><section class="box" id="noticeManagement">
+<h2>Notices Management</h2><p class="muted">Publish school announcements. Active notices appear on the public website.</p>
+<form id="noticeForm"><input type="hidden" id="noticeId"><div class="formgrid">
+<div><label for="noticeTitle">Notice title *</label><input id="noticeTitle" maxlength="120" required placeholder="e.g. School reopens on Monday"></div>
+<div><label for="noticeDate">Display date (optional)</label><input id="noticeDate" type="date"></div>
+<div><label for="noticeActive">Visibility</label><select id="noticeActive"><option value="true">Published</option><option value="false">Draft / hidden</option></select></div>
+<div style="grid-column:1/-1"><label for="noticeBody">Notice details *</label><textarea id="noticeBody" maxlength="2000" required placeholder="Write the announcement clearly..."></textarea></div>
+</div><p><button id="saveNoticeBtn" type="submit">Publish notice</button> <button id="cancelNoticeBtn" class="secondary" type="button">Clear form</button></p></form>
+<div id="noticeMessage" role="status" class="muted"></div><div id="noticeList" class="teacher-grid"><p class="muted">Loading notices…</p></div>
+</section>
+<section class="box" id="teacherManagement">
 <h2>Teacher Management</h2>
 <p class="muted">Add, edit or remove teacher profiles. Public website par active profiles automatically dikhengi.</p>
 <form id="teacherForm">
@@ -76,7 +86,54 @@ onAuthStateChanged(auth, async user => {
   $("login").style.display = "none";
   $("dashboard").style.display = "block";
   $("who").textContent = "Signed in as " + user.email;
-  await Promise.all([loadEnquiries(), loadTeachersAdmin()]);
+  await Promise.all([loadEnquiries(), loadTeachersAdmin(), loadNoticesAdmin()]);
+});
+
+function clearNoticeForm() {
+  $("noticeForm").reset(); $("noticeId").value = ""; $("saveNoticeBtn").textContent = "Publish notice";
+}
+$("cancelNoticeBtn").onclick = clearNoticeForm;
+
+async function loadNoticesAdmin() {
+  const list = $("noticeList"); list.textContent = "Loading notices…";
+  try {
+    const snap = await getDocs(query(collection(db, "NOTICES"), orderBy("createdAt", "desc")));
+    list.replaceChildren();
+    if (snap.empty) { list.textContent = "No notices published yet."; return; }
+    snap.forEach(item => {
+      const n = item.data(), card = document.createElement("article"); card.className = "teacher-item";
+      const title = document.createElement("h3"); title.textContent = n.title || "School notice";
+      const body = document.createElement("p"); body.textContent = n.body || "";
+      const meta = document.createElement("p"); meta.className = "muted"; meta.textContent = [n.noticeDate || "", n.active === false ? "Hidden" : "Published"].filter(Boolean).join(" · ");
+      const edit = document.createElement("button"); edit.textContent = "Edit";
+      edit.onclick = () => {
+        $("noticeId").value = item.id; $("noticeTitle").value = n.title || ""; $("noticeBody").value = n.body || "";
+        $("noticeDate").value = n.noticeDate || ""; $("noticeActive").value = String(n.active !== false);
+        $("saveNoticeBtn").textContent = "Save changes"; $("noticeForm").scrollIntoView({behavior:"smooth",block:"center"});
+      };
+      const remove = document.createElement("button"); remove.textContent = "Delete"; remove.className = "danger";
+      remove.onclick = async () => {
+        if (!confirm("Delete this notice permanently?")) return;
+        try { await deleteDoc(doc(db, "NOTICES", item.id)); $("noticeMessage").textContent = "Notice deleted."; await loadNoticesAdmin(); }
+        catch (e) { $("noticeMessage").textContent = "Could not delete notice. Check Firestore Rules."; }
+      };
+      card.append(title, body, meta, edit, remove); list.appendChild(card);
+    });
+  } catch (error) { console.error(error); list.textContent = "Could not load notices. Confirm the latest Firestore Rules are published."; }
+}
+
+$("noticeForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const title = $("noticeTitle").value.trim(), body = $("noticeBody").value.trim();
+  if (!title || !body) { $("noticeMessage").textContent = "Enter both a title and notice details."; return; }
+  const data = {title, body, noticeDate:$("noticeDate").value, active:$("noticeActive").value === "true", updatedAt:serverTimestamp()};
+  const id = $("noticeId").value; $("saveNoticeBtn").disabled = true;
+  try {
+    if (id) { await updateDoc(doc(db, "NOTICES", id), data); $("noticeMessage").textContent = "Notice updated."; }
+    else { await addDoc(collection(db, "NOTICES"), {...data, createdAt:serverTimestamp()}); $("noticeMessage").textContent = "Notice published."; }
+    clearNoticeForm(); await loadNoticesAdmin();
+  } catch (error) { console.error(error); $("noticeMessage").textContent = "Save failed. Check Firestore Rules."; }
+  finally { $("saveNoticeBtn").disabled = false; }
 });
 
 function clearTeacherForm() {
